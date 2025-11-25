@@ -135,6 +135,12 @@
       box-shadow: 0 6px 20px rgba(0, 224, 255, 0.3);
     }
 
+    button:disabled {
+      opacity: 0.6;
+      transform: none;
+      cursor: not-allowed;
+    }
+
     button.secondary {
       background: rgba(255, 255, 255, 0.08);
       color: var(--text);
@@ -294,6 +300,77 @@
       margin-left: 10px;
     }
 
+    /* TOAST NOTIFICATIONS */
+    #toastContainer {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      z-index: 1000;
+    }
+
+    .toast {
+      padding: 14px 20px;
+      border-radius: 10px;
+      margin-bottom: 12px;
+      font-weight: 600;
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+      animation: slideIn 0.3s ease;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      max-width: 350px;
+    }
+
+    @keyframes slideIn {
+      from { transform: translateX(100%); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+
+    .toast-success {
+      background: rgba(40, 255, 174, 0.2);
+      border: 1px solid var(--success);
+      color: var(--success);
+    }
+
+    .toast-error {
+      background: rgba(255, 58, 138, 0.2);
+      border: 1px solid var(--danger);
+      color: var(--danger);
+    }
+
+    .toast-close {
+      background: none;
+      border: none;
+      color: inherit;
+      font-size: 1.2rem;
+      cursor: pointer;
+      margin-left: 12px;
+    }
+
+    /* LOADING SPINNER */
+    .spinner {
+      width: 20px;
+      height: 20px;
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      border-top: 2px solid var(--accent);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      display: inline-block;
+      margin-right: 8px;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    .loading-text {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--muted);
+    }
+
     html, body {
       width: 100%;
       overflow-x: hidden;
@@ -304,6 +381,15 @@
       h1 { font-size: 2.2rem; }
       .card { padding: 24px; }
       button { padding: 14px; }
+      #toastContainer {
+        top: 15px;
+        right: 15px;
+        left: 15px;
+        max-width: calc(100% - 30px);
+      }
+      .toast {
+        max-width: none;
+      }
     }
   </style>
 </head>
@@ -342,7 +428,7 @@
         </div>
         <div class="premium-banner">
           <p>✨ <strong>Free Tier:</strong> 3 aliases • 72h lifetime</p>
-          <button id="goPremiumBtn">Upgrade to Premium</button>
+          <button id="goPremiumBtn">Upgrade to Premium — Unlimited Aliases</button>
         </div>
       </div>
 
@@ -362,7 +448,26 @@
     </footer>
   </div>
 
+  <!-- TOAST CONTAINER -->
+  <div id="toastContainer"></div>
+
   <script>
+    // ======================
+    // TOAST SYSTEM
+    // ======================
+    function showToast(message, type = 'success') {
+      const toast = document.createElement('div');
+      toast.className = `toast toast-${type}`;
+      toast.innerHTML = `
+        ${message}
+        <button class="toast-close" onclick="this.parentElement.remove()">×</button>
+      `;
+      document.getElementById('toastContainer').appendChild(toast);
+      setTimeout(() => {
+        if (toast.parentNode) toast.remove();
+      }, 5000);
+    }
+
     // ======================
     // ENCRYPTION UTILS
     // ======================
@@ -420,7 +525,7 @@
     }
 
     // ======================
-    // TEMP EMAIL API — USING REAL DOMAINS
+    // TEMP EMAIL API
     // ======================
     const DOMAINS = ['1secmail.net', '1secmail.com', 'esiix.com'];
     const PREFIX = 'vault';
@@ -430,8 +535,7 @@
         'abcdefghijklmnopqrstuvwxyz1234567890'.charAt(Math.floor(Math.random() * 36))
       ).join('');
       const domain = DOMAINS[0];
-      const real = `${PREFIX}-${randomStr}@${domain}`;
-      return { real, display: real };
+      return `${PREFIX}-${randomStr}@${domain}`;
     }
 
     async function checkInbox(emailLocal, domain) {
@@ -467,7 +571,7 @@
     // STATE & DOM
     // ======================
     let currentUser = null;
-    let currentData = { aliases: [] };
+    let currentData = { aliases: [], isPremium: false, premiumKey: '' };
     let inboxInterval = null;
     let currentRealEmail = null;
 
@@ -477,6 +581,7 @@
     const inboxSection = document.getElementById('inboxSection');
     const emailList = document.getElementById('emailList');
     const currentAliasDisplay = document.getElementById('currentAliasDisplay');
+    const createAliasBtn = document.getElementById('createAliasBtn');
 
     // ======================
     // UI FUNCTIONS
@@ -501,11 +606,6 @@
 
       aliasesList.innerHTML = '';
       activeAliases.forEach(alias => {
-        if (!alias || !alias.real || !alias.display) {
-          console.error('Invalid alias:', alias);
-          return;
-        }
-
         const expiresAt = alias.createdAt + (72 * 60 * 60 * 1000);
         const timeLeft = expiresAt - now;
 
@@ -514,10 +614,10 @@
         div.innerHTML = `
           <div>
             <div class="alias-label">AliasVault Secure ID</div>
-            <div class="alias-email">${alias.display}</div>
+            <div class="alias-email">${alias.email}</div>
             <div class="timer">🕒 Expires in: ${formatTime(timeLeft)}</div>
           </div>
-          <button class="secondary" onclick="window.openInbox('${alias.real}')">Open Inbox</button>
+          <button class="secondary" onclick="window.openInbox('${alias.email}')">Open Inbox</button>
         `;
         aliasesList.appendChild(div);
       });
@@ -525,14 +625,14 @@
 
     async function openInbox(realEmail) {
       if (!realEmail) {
-        alert('Invalid alias. Please create a new one.');
+        showToast('Invalid alias.', 'error');
         return;
       }
 
       const [local, domain] = realEmail.split('@');
       currentRealEmail = realEmail;
       currentAliasDisplay.textContent = realEmail;
-      emailList.innerHTML = '<p style="text-align: center; padding: 20px;">Checking inbox...</p>';
+      emailList.innerHTML = '<p class="loading-text"><span class="spinner"></span> Checking inbox...</p>';
       inboxSection.classList.remove('hidden');
 
       if (inboxInterval) clearInterval(inboxInterval);
@@ -583,6 +683,8 @@
           btn.textContent = original;
           btn.style.opacity = '1';
         }, 2000);
+      }).catch(() => {
+        showToast('Failed to copy.', 'error');
       });
     };
 
@@ -597,28 +699,46 @@
     async function createAlias() {
       const now = Date.now();
       const activeCount = currentData.aliases.filter(a => a.createdAt + 72*60*60*1000 > now).length;
-      if (activeCount >= 3) {
-        alert('Free tier limit: 3 active aliases. Delete an expired one or upgrade to Premium for unlimited.');
+      const limit = currentData.isPremium ? 100 : 3;
+
+      if (activeCount >= limit) {
+        showToast(`Alias limit reached! Free: 3 • Premium: Unlimited`, 'error');
         return;
       }
 
       try {
-        const alias = await getRandomAlias();
-        if (!alias || !alias.real || !alias.display) {
-          throw new Error('Failed to generate alias');
-        }
+        createAliasBtn.disabled = true;
+        createAliasBtn.innerHTML = '<span class="spinner"></span> Creating...';
 
+        const email = await getRandomAlias();
         currentData.aliases.push({
-          realEmail: alias.real,
-          displayEmail: alias.display,
+          email,
           createdAt: now
         });
 
         await saveData();
         renderAliases();
+        showToast('✅ New alias created!', 'success');
       } catch (e) {
-        alert('Failed to create alias. Try again.');
+        showToast('Failed to create alias. Try again.', 'error');
         console.error('Create alias error:', e);
+      } finally {
+        createAliasBtn.disabled = false;
+        createAliasBtn.textContent = '+ New Alias';
+      }
+    }
+
+    async function verifyPremiumKey(key) {
+      // In real app, verify with Gumroad API
+      // For now, any 8+ char key = premium
+      if (key && key.length >= 8) {
+        currentData.isPremium = true;
+        currentData.premiumKey = key;
+        await saveData();
+        showToast('🎉 Premium activated! Unlimited aliases unlocked.', 'success');
+        renderAliases();
+      } else {
+        showToast('Invalid key. Must be 8+ characters.', 'error');
       }
     }
 
@@ -640,7 +760,7 @@
       const email = document.getElementById('loginEmail').value.trim();
       const password = document.getElementById('loginPassword').value;
       if (!email || !password) {
-        alert('Please enter email and password.');
+        showToast('Please enter email and password.', 'error');
         return;
       }
 
@@ -655,11 +775,11 @@
           appScreen.classList.remove('hidden');
           renderAliases();
         } catch (e) {
-          alert('Invalid email or password.');
+          showToast('Invalid email or password.', 'error');
         }
       } else {
         currentUser = { email, password };
-        currentData = { aliases: [] };
+        currentData = { aliases: [], isPremium: false, premiumKey: '' };
         await saveData();
         loginScreen.classList.add('hidden');
         appScreen.classList.remove('hidden');
@@ -675,7 +795,7 @@
     document.getElementById('logoutLink').addEventListener('click', (e) => {
       e.preventDefault();
       currentUser = null;
-      currentData = { aliases: [] };
+      currentData = { aliases: [], isPremium: false, premiumKey: '' };
       appScreen.classList.add('hidden');
       loginScreen.classList.remove('hidden');
       if (inboxInterval) clearInterval(inboxInterval);
@@ -683,7 +803,10 @@
     });
 
     document.getElementById('goPremiumBtn').addEventListener('click', () => {
-      alert('Premium coming soon! For now, all aliases are real and working.');
+      const key = prompt('Enter your Premium License Key (get one at aliasvault.app/premium):');
+      if (key) {
+        verifyPremiumKey(key.trim());
+      }
     });
 
     window.addEventListener('load', () => {
