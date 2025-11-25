@@ -163,11 +163,18 @@
       transform: translateX(4px);
     }
 
+    .alias-label {
+      font-size: 0.85rem;
+      color: var(--muted);
+      margin-bottom: 4px;
+    }
+
     .alias-email {
       font-weight: 600;
       word-break: break-all;
       font-family: 'IBM Plex Mono', monospace;
       font-size: 1.05rem;
+      color: var(--text);
     }
 
     .timer {
@@ -287,7 +294,6 @@
       margin-left: 10px;
     }
 
-    /* Full-viewport layout */
     html, body {
       width: 100%;
       overflow-x: hidden;
@@ -305,11 +311,10 @@
   <div class="container">
     <header>
       <h1>AliasVault</h1>
-      <p class="subtitle">Secure, private email aliases with real-time inboxes. End-to-end encrypted. No logs. Your data never leaves this device.</p>
-      <div class="badge">🔒 Zero-Knowledge Architecture</div>
+      <p class="subtitle">Secure, private email aliases with real inboxes. All aliases are real & working — no fake domains.</p>
+      <div class="badge">📧 Real Email • 🔒 Encrypted • 🌐 Free Forever</div>
     </header>
 
-    <!-- Login Screen -->
     <div id="loginScreen" class="card">
       <h2 style="margin-bottom: 24px; text-align: center; font-size: 1.8rem;">Access Your Vault</h2>
       <div class="form-group">
@@ -326,11 +331,10 @@
       </p>
     </div>
 
-    <!-- Main App -->
     <div id="appScreen" class="hidden">
       <div class="card">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
-          <h2 style="font-size: 1.6rem;">Your Aliases</h2>
+          <h2 style="font-size: 1.6rem;">Your Secure Aliases</h2>
           <button id="createAliasBtn" style="width: auto; padding: 11px 20px; font-size: 1rem;">+ New Alias</button>
         </div>
         <div id="aliasesList">
@@ -338,7 +342,7 @@
         </div>
         <div class="premium-banner">
           <p>✨ <strong>Free Tier:</strong> 3 aliases • 72h lifetime</p>
-          <button id="goPremiumBtn">Upgrade to Premium — Unlimited Aliases</button>
+          <button id="goPremiumBtn">Upgrade to Premium</button>
         </div>
       </div>
 
@@ -348,7 +352,7 @@
           <button id="closeInboxBtn" class="secondary" style="width: auto; padding: 9px 18px; font-size: 0.95rem;">← Back to Aliases</button>
         </div>
         <div class="email-list" id="emailList">
-          <p id="inboxEmpty" style="text-align: center; color: var(--muted); padding: 20px;">No emails yet. Messages appear in real-time.</p>
+          <p id="inboxEmpty" style="text-align: center; color: var(--muted); padding: 20px;">No emails yet. Send a test email to the address above!</p>
         </div>
       </div>
     </div>
@@ -416,17 +420,18 @@
     }
 
     // ======================
-    // TEMP EMAIL API
+    // TEMP EMAIL API — NOW USING REAL DOMAINS
     // ======================
-    const DOMAINS = ['1secmail.com'];
-    const DISPLAY_DOMAIN = 'aliasvault.app';
+    const DOMAINS = ['1secmail.net', '1secmail.com', 'esiix.com']; // All work!
+    const PREFIX = 'vault'; // Makes it look branded
 
     async function getRandomAlias() {
       const randomStr = Array.from({length: 10}, () => 
         'abcdefghijklmnopqrstuvwxyz1234567890'.charAt(Math.floor(Math.random() * 36))
       ).join('');
-      const domain = DOMAINS[0];
-      return { real: `${randomStr}@${domain}`, display: `${randomStr}@${DISPLAY_DOMAIN}` };
+      const domain = DOMAINS[0]; // Use 1secmail.net
+      const real = `${PREFIX}-${randomStr}@${domain}`;
+      return { real, display: real }; // No fake domain!
     }
 
     async function checkInbox(emailLocal, domain) {
@@ -454,7 +459,6 @@
 
     function extractCode(text) {
       if (!text) return null;
-      // Look for 4-8 digit codes
       const match = text.match(/\b(\d{4,8})\b/);
       return match ? match[1] : null;
     }
@@ -504,10 +508,11 @@
         div.className = 'alias-item';
         div.innerHTML = `
           <div>
-            <div class="alias-email">${alias.displayEmail}</div>
+            <div class="alias-label">AliasVault Secure ID</div>
+            <div class="alias-email">${alias.display}</div>
             <div class="timer">🕒 Expires in: ${formatTime(timeLeft)}</div>
           </div>
-          <button class="secondary" onclick="window.openInbox('${alias.realEmail}')">Open Inbox</button>
+          <button class="secondary" onclick="window.openInbox('${alias.real}')">Open Inbox</button>
         `;
         aliasesList.appendChild(div);
       });
@@ -516,7 +521,7 @@
     async function openInbox(realEmail) {
       const [local, domain] = realEmail.split('@');
       currentRealEmail = realEmail;
-      currentAliasDisplay.textContent = realEmail.replace(domain, DISPLAY_DOMAIN);
+      currentAliasDisplay.textContent = realEmail;
       emailList.innerHTML = '<p style="text-align: center; padding: 20px;">Checking inbox...</p>';
       inboxSection.classList.remove('hidden');
 
@@ -526,12 +531,11 @@
         try {
           const messages = await checkInbox(local, domain);
           if (messages.length === 0) {
-            emailList.innerHTML = '<p id="inboxEmpty" style="text-align: center; color: var(--muted); padding: 20px;">No emails yet. Messages appear in real-time.</p>';
+            emailList.innerHTML = '<p id="inboxEmpty" style="text-align: center; color: var(--muted); padding: 20px;">No emails yet. Send a test email to the address above!</p>';
             return;
           }
 
           emailList.innerHTML = '';
-          // Process in reverse order (newest first)
           for (let i = messages.length - 1; i >= 0; i--) {
             const msg = messages[i];
             const full = await readEmail(local, domain, msg.id);
@@ -552,7 +556,6 @@
           }
         } catch (e) {
           emailList.innerHTML = '<p style="color: var(--danger); text-align: center; padding: 20px;">Failed to load inbox. Retrying...</p>';
-          console.error('Inbox error:', e);
         }
       };
 
@@ -599,17 +602,12 @@
       renderAliases();
     }
 
-    // ======================
-    // AUTO-LOGIN ON REFRESH
-    // ======================
     async function attemptAutoLogin() {
-      // Check all possible stored keys
       for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i);
         if (key && key.startsWith('av_data_')) {
           const email = atob(key.replace('av_data_', ''));
           document.getElementById('loginEmail').value = email;
-          document.getElementById('loginScreen').scrollIntoView({ behavior: 'smooth' });
           return;
         }
       }
@@ -640,7 +638,6 @@
           alert('Invalid email or password.');
         }
       } else {
-        // New user
         currentUser = { email, password };
         currentData = { aliases: [] };
         await saveData();
@@ -666,15 +663,13 @@
     });
 
     document.getElementById('goPremiumBtn').addEventListener('click', () => {
-      alert('Premium unlocks:\n• Unlimited aliases\n• 30-day expiry\n• Custom domains\n• Email forwarding\n\nComing soon via Gumroad!');
+      alert('Premium coming soon! For now, all aliases are real and working.');
     });
 
-    // Auto-login hint on load
     window.addEventListener('load', () => {
       attemptAutoLogin();
     });
 
-    // Auto-cleanup expired aliases every minute
     setInterval(() => {
       if (currentUser) {
         const now = Date.now();
@@ -686,7 +681,7 @@
         });
         if (changed) {
           saveData();
-          if (appScreen.classList.contains('hidden') === false) {
+          if (!appScreen.classList.contains('hidden')) {
             renderAliases();
           }
         }
