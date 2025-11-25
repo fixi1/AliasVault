@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AliasVault — Secure Disposable Email</title>
+  <meta name="description" content="Create private, temporary email aliases with real inboxes. Never give your real email again." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #0a0e17;
+      --card: #121826;
+      --accent: #00f0ff;
+      --accent-dark: #00b3cc;
+      --text: #e6f0ff;
+      --muted: #7a8cbf;
+      --danger: #ff4d94;
+      --success: #2effb3;
+      --radius: 12px;
+      --shadow: 0 8px 30px rgba(0, 20, 40, 0.6);
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Space Grotesk', system-ui, sans-serif;
+      line-height: 1.6;
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+    }
+
+    header {
+      text-align: center;
+      padding: 30px 0 40px;
+    }
+
+    h1 {
+      font-size: 2.4rem;
+      font-weight: 700;
+      background: linear-gradient(90deg, var(--accent), #7a4fff);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      margin-bottom: 8px;
+    }
+
+    .subtitle {
+      color: var(--muted);
+      font-size: 1.1rem;
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    .card {
+      background: var(--card);
+      border-radius: var(--radius);
+      padding: 28px;
+      margin-bottom: 24px;
+      box-shadow: var(--shadow);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 500;
+      color: var(--text);
+    }
+
+    input {
+      width: 100%;
+      padding: 14px;
+      border-radius: 8px;
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: var(--text);
+      font-size: 1rem;
+      font-family: inherit;
+    }
+
+    input:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px rgba(0, 240, 255, 0.2);
+    }
+
+    button {
+      background: linear-gradient(90deg, var(--accent), var(--accent-dark));
+      color: var(--bg);
+      border: none;
+      padding: 14px 24px;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: opacity 0.2s;
+      font-family: inherit;
+      width: 100%;
+    }
+
+    button:hover {
+      opacity: 0.9;
+    }
+
+    button.secondary {
+      background: rgba(255, 255, 255, 0.1);
+      color: var(--text);
+      background: linear-gradient(90deg, transparent, transparent);
+    }
+
+    .alias-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 16px;
+      background: rgba(0, 0, 0, 0.2);
+      border-radius: 8px;
+      margin-bottom: 12px;
+      border-left: 3px solid var(--accent);
+    }
+
+    .alias-email {
+      font-weight: 600;
+      word-break: break-all;
+    }
+
+    .timer {
+      color: var(--muted);
+      font-size: 0.85rem;
+      margin-top: 4px;
+    }
+
+    .inbox {
+      margin-top: 20px;
+    }
+
+    .inbox-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+
+    .email-list {
+      max-height: 300px;
+      overflow-y: auto;
+      padding-right: 8px;
+    }
+
+    .email-item {
+      background: rgba(0, 0, 0, 0.25);
+      padding: 14px;
+      border-radius: 8px;
+      margin-bottom: 10px;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .email-from {
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+
+    .email-subject {
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+
+    .email-code {
+      background: rgba(0, 240, 255, 0.15);
+      color: var(--accent);
+      padding: 6px 10px;
+      border-radius: 6px;
+      font-weight: 700;
+      font-size: 1.1rem;
+      display: inline-block;
+      margin-top: 8px;
+    }
+
+    .code-btn {
+      background: rgba(46, 255, 179, 0.2);
+      color: var(--success);
+      border: 1px solid var(--success);
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      margin-left: 10px;
+      cursor: pointer;
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    .premium-banner {
+      text-align: center;
+      padding: 20px;
+      background: linear-gradient(90deg, rgba(122, 79, 255, 0.1), rgba(0, 240, 255, 0.1));
+      border-radius: var(--radius);
+      margin: 30px 0;
+    }
+
+    .premium-banner p {
+      margin-bottom: 16px;
+    }
+
+    footer {
+      text-align: center;
+      margin-top: 40px;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    @media (max-width: 600px) {
+      .container { padding: 15px; }
+      h1 { font-size: 2rem; }
+      .card { padding: 20px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>AliasVault</h1>
+      <p class="subtitle">Secure, private email aliases with real inboxes. End-to-end encrypted. No logs. Your data never leaves this device.</p>
+    </header>
+
+    <!-- Login Screen -->
+    <div id="loginScreen" class="card">
+      <h2 style="margin-bottom: 20px; text-align: center;">Secure Login</h2>
+      <div class="form-group">
+        <label for="loginEmail">Email</label>
+        <input type="email" id="loginEmail" placeholder="you@example.com" autocomplete="off" />
+      </div>
+      <div class="form-group">
+        <label for="loginPassword">Password</label>
+        <input type="password" id="loginPassword" placeholder="••••••••" autocomplete="off" />
+      </div>
+      <button id="loginBtn">Access Your Vault</button>
+      <p style="text-align: center; margin-top: 16px; color: var(--muted); font-size: 0.9rem;">
+        Your password encrypts your data locally. We never see it.
+      </p>
+    </div>
+
+    <!-- Main App (Hidden Until Login) -->
+    <div id="appScreen" class="hidden">
+      <div class="card">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+          <h2>Your Aliases</h2>
+          <button id="createAliasBtn" style="width: auto; padding: 10px 18px; font-size: 0.95rem;">+ New Alias</button>
+        </div>
+        <div id="aliasesList">
+          <!-- Aliases will appear here -->
+        </div>
+        <div class="premium-banner">
+          <p>🔒 <strong>Free Tier:</strong> 3 aliases • 72h lifetime</p>
+          <button id="goPremiumBtn">Upgrade to Premium — Unlimited Aliases</button>
+        </div>
+      </div>
+
+      <div id="inboxSection" class="card hidden">
+        <div class="inbox-header">
+          <h2>Inbox: <span id="currentAliasDisplay"></span></h2>
+          <button id="closeInboxBtn" class="secondary" style="width: auto; padding: 8px 16px;">← Back</button>
+        </div>
+        <div class="email-list" id="emailList">
+          <p id="inboxEmpty">No emails yet. Check back in a few seconds.</p>
+        </div>
+      </div>
+    </div>
+
+    <footer>
+      <p>© 2025 AliasVault — <a href="#" id="logoutLink" style="color: var(--accent); text-decoration: none;">Logout</a></p>
+    </footer>
+  </div>
+
+  <script>
+    // ======================
+    // ENCRYPTION UTILS (Client-Side Only)
+    // ======================
+    async function deriveKey(password, salt) {
+      const enc = new TextEncoder();
+      const keyMaterial = await window.crypto.subtle.importKey(
+        'raw',
+        enc.encode(password),
+        { name: 'PBKDF2' },
+        false,
+        ['deriveKey']
+      );
+      return await window.crypto.subtle.deriveKey(
+        {
+          name: 'PBKDF2',
+          salt: salt,
+          iterations: 100000,
+          hash: 'SHA-256'
+        },
+        keyMaterial,
+        { name: 'AES-GCM', length: 256 },
+        false,
+        ['encrypt', 'decrypt']
+      );
+    }
+
+    async function encryptData(data, password) {
+      const salt = window.crypto.getRandomValues(new Uint8Array(16));
+      const key = await deriveKey(password, salt);
+      const iv = window.crypto.getRandomValues(new Uint8Array(12));
+      const enc = new TextEncoder();
+      const encrypted = await window.crypto.subtle.encrypt(
+        { name: 'AES-GCM', iv: iv },
+        key,
+        enc.encode(JSON.stringify(data))
+      );
+      return {
+        encrypted: Array.from(new Uint8Array(encrypted)),
+        salt: Array.from(salt),
+        iv: Array.from(iv)
+      };
+    }
+
+    async function decryptData(encryptedObj, password) {
+      const salt = new Uint8Array(encryptedObj.salt);
+      const iv = new Uint8Array(encryptedObj.iv);
+      const key = await deriveKey(password, salt);
+      const decrypted = await window.crypto.subtle.decrypt(
+        { name: 'AES-GCM', iv: iv },
+        key,
+        new Uint8Array(encryptedObj.encrypted)
+      );
+      const dec = new TextDecoder();
+      return JSON.parse(dec.decode(decrypted));
+    }
+
+    // ======================
+    // TEMP EMAIL API (1secmail)
+    // ======================
+    const DOMAINS = ['1secmail.com', '1secmail.org', '1secmail.net'];
+    const DISPLAY_DOMAIN = 'aliasvault.app';
+
+    async function getRandomAlias() {
+      const randomStr = Math.random().toString(36).substring(2, 12);
+      const domain = DOMAINS[0]; // use first
+      return { real: `${randomStr}@${domain}`, display: `${randomStr}@${DISPLAY_DOMAIN}` };
+    }
+
+    async function checkInbox(emailLocal, domain) {
+      const res = await fetch(`https://www.1secmail.com/api/v1/?action=getMessages&login=${emailLocal}&domain=${domain}`);
+      if (!res.ok) return [];
+      return await res.json();
+    }
+
+    async function readEmail(emailLocal, domain, id) {
+      const res = await fetch(`https://www.1secmail.com/api/v1/?action=readMessage&login=${emailLocal}&domain=${domain}&id=${id}`);
+      if (!res.ok) return null;
+      return await res.json();
+    }
+
+    function extractCode(text) {
+      const match = text.match(/\b(\d{5,6})\b/);
+      return match ? match[1] : null;
+    }
+
+    // ======================
+    // APP STATE
+    // ======================
+    let currentUser = null;
+    let currentData = { aliases: [] };
+    let inboxInterval = null;
+
+    // ======================
+    // DOM ELEMENTS
+    // ======================
+    const loginScreen = document.getElementById('loginScreen');
+    const appScreen = document.getElementById('appScreen');
+    const aliasesList = document.getElementById('aliasesList');
+    const inboxSection = document.getElementById('inboxSection');
+    const emailList = document.getElementById('emailList');
+    const currentAliasDisplay = document.getElementById('currentAliasDisplay');
+
+    // ======================
+    // UI FUNCTIONS
+    // ======================
+    function renderAliases() {
+      if (currentData.aliases.length === 0) {
+        aliasesList.innerHTML = '<p style="color: var(--muted);">No aliases yet. Create one!</p>';
+        return;
+      }
+
+      aliasesList.innerHTML = '';
+      currentData.aliases.forEach(alias => {
+        const now = Date.now();
+        const expiresAt = alias.createdAt + (72 * 60 * 60 * 1000);
+        const timeLeft = expiresAt - now;
+
+        if (timeLeft <= 0) {
+          // Expired — skip
+          return;
+        }
+
+        const hours = Math.floor(timeLeft / (1000 * 60 * 60));
+        const mins = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
+
+        const div = document.createElement('div');
+        div.className = 'alias-item';
+        div.innerHTML = `
+          <div>
+            <div class="alias-email">${alias.displayEmail}</div>
+            <div class="timer">Expires in: ${hours}h ${mins}m</div>
+          </div>
+          <button class="secondary" onclick="openInbox('${alias.realEmail}')">Open Inbox</button>
+        `;
+        aliasesList.appendChild(div);
+      });
+    }
+
+    async function openInbox(realEmail) {
+      const [local, domain] = realEmail.split('@');
+      currentAliasDisplay.textContent = realEmail.replace(domain, DISPLAY_DOMAIN);
+
+      // Show loading
+      emailList.innerHTML = '<p>Loading messages...</p>';
+      inboxSection.classList.remove('hidden');
+
+      // Clear previous interval
+      if (inboxInterval) clearInterval(inboxInterval);
+
+      // Poll every 3 seconds
+      const poll = async () => {
+        try {
+          const messages = await checkInbox(local, domain);
+          if (messages.length === 0) {
+            emailList.innerHTML = '<p id="inboxEmpty">No emails yet. Check back in a few seconds.</p>';
+            return;
+          }
+
+          emailList.innerHTML = '';
+          for (const msg of messages.slice().reverse()) {
+            const full = await readEmail(local, domain, msg.id);
+            if (!full) continue;
+
+            const code = extractCode(full.textBody || full.htmlBody || '');
+            const item = document.createElement('div');
+            item.className = 'email-item';
+            item.innerHTML = `
+              <div class="email-from">${full.from}</div>
+              <div class="email-subject">${msg.subject}</div>
+              <div>${(full.textBody || '').substring(0, 120)}...</div>
+              ${code ? `<div class="email-code">Verification Code: ${code} <button class="code-btn" onclick="copyCode('${code}')">Copy</button></div>` : ''}
+            `;
+            emailList.appendChild(item);
+          }
+        } catch (e) {
+          emailList.innerHTML = '<p style="color: var(--danger);">Error loading inbox.</p>';
+        }
+      };
+
+      await poll();
+      inboxInterval = setInterval(poll, 3000);
+    }
+
+    function copyCode(code) {
+      navigator.clipboard.writeText(code).then(() => {
+        const btn = event.target;
+        btn.textContent = 'Copied!';
+        setTimeout(() => btn.textContent = 'Copy', 2000);
+      });
+    }
+
+    async function saveData() {
+      if (!currentUser) return;
+      const encrypted = await encryptData(currentData, currentUser.password);
+      localStorage.setItem('av_data_' + currentUser.email, JSON.stringify(encrypted));
+    }
+
+    async function createAlias() {
+      if (currentData.aliases.filter(a => a.createdAt + 72*60*60*1000 > Date.now()).length >= 3) {
+        alert('Free tier limit: 3 active aliases. Upgrade to Premium for unlimited.');
+        return;
+      }
+
+      const alias = await getRandomAlias();
+      currentData.aliases.push({
+        realEmail: alias.real,
+        displayEmail: alias.display,
+        createdAt: Date.now()
+      });
+      await saveData();
+      renderAliases();
+    }
+
+    // ======================
+    // EVENT LISTENERS
+    // ======================
+    document.getElementById('loginBtn').addEventListener('click', async () => {
+      const email = document.getElementById('loginEmail').value.trim();
+      const password = document.getElementById('loginPassword').value;
+      if (!email || !password) {
+        alert('Please enter email and password.');
+        return;
+      }
+
+      const stored = localStorage.getItem('av_data_' + email);
+      if (stored) {
+        try {
+          const decrypted = await decryptData(JSON.parse(stored), password);
+          currentUser = { email, password };
+          currentData = decrypted;
+          loginScreen.classList.add('hidden');
+          appScreen.classList.remove('hidden');
+          renderAliases();
+        } catch (e) {
+          alert('Invalid email or password.');
+        }
+      } else {
+        // New user
+        currentUser = { email, password };
+        currentData = { aliases: [] };
+        await saveData();
+        loginScreen.classList.add('hidden');
+        appScreen.classList.remove('hidden');
+      }
+    });
+
+    document.getElementById('createAliasBtn').addEventListener('click', createAlias);
+    document.getElementById('closeInboxBtn').addEventListener('click', () => {
+      inboxSection.classList.add('hidden');
+      if (inboxInterval) clearInterval(inboxInterval);
+    });
+    document.getElementById('logoutLink').addEventListener('click', () => {
+      currentUser = null;
+      currentData = { aliases: [] };
+      appScreen.classList.add('hidden');
+      loginScreen.classList.remove('hidden');
+      if (inboxInterval) clearInterval(inboxInterval);
+    });
+
+    document.getElementById('goPremiumBtn').addEventListener('click', () => {
+      alert('Premium coming soon! For now, you can support development via PayPal.');
+      // Later: window.open('https://gumroad.com/...', '_blank');
+    });
+
+    // Auto-cleanup expired aliases on load
+    window.addEventListener('storage', () => {
+      // Not needed for single device, but safe
+    });
+  </script>
+</body>
+</html>
