@@ -311,7 +311,7 @@
   <div class="container">
     <header>
       <h1>AliasVault</h1>
-      <p class="subtitle">Secure, private email aliases with real inboxes. All aliases are real & working — no fake domains.</p>
+      <p class="subtitle">Secure, private email aliases with real inboxes. All addresses are real and work instantly.</p>
       <div class="badge">📧 Real Email • 🔒 Encrypted • 🌐 Free Forever</div>
     </header>
 
@@ -420,18 +420,18 @@
     }
 
     // ======================
-    // TEMP EMAIL API — NOW USING REAL DOMAINS
+    // TEMP EMAIL API — USING REAL DOMAINS
     // ======================
-    const DOMAINS = ['1secmail.net', '1secmail.com', 'esiix.com']; // All work!
-    const PREFIX = 'vault'; // Makes it look branded
+    const DOMAINS = ['1secmail.net', '1secmail.com', 'esiix.com'];
+    const PREFIX = 'vault';
 
     async function getRandomAlias() {
       const randomStr = Array.from({length: 10}, () => 
         'abcdefghijklmnopqrstuvwxyz1234567890'.charAt(Math.floor(Math.random() * 36))
       ).join('');
-      const domain = DOMAINS[0]; // Use 1secmail.net
+      const domain = DOMAINS[0];
       const real = `${PREFIX}-${randomStr}@${domain}`;
-      return { real, display: real }; // No fake domain!
+      return { real, display: real };
     }
 
     async function checkInbox(emailLocal, domain) {
@@ -501,6 +501,11 @@
 
       aliasesList.innerHTML = '';
       activeAliases.forEach(alias => {
+        if (!alias || !alias.real || !alias.display) {
+          console.error('Invalid alias:', alias);
+          return;
+        }
+
         const expiresAt = alias.createdAt + (72 * 60 * 60 * 1000);
         const timeLeft = expiresAt - now;
 
@@ -519,6 +524,11 @@
     }
 
     async function openInbox(realEmail) {
+      if (!realEmail) {
+        alert('Invalid alias. Please create a new one.');
+        return;
+      }
+
       const [local, domain] = realEmail.split('@');
       currentRealEmail = realEmail;
       currentAliasDisplay.textContent = realEmail;
@@ -592,14 +602,24 @@
         return;
       }
 
-      const alias = await getRandomAlias();
-      currentData.aliases.push({
-        realEmail: alias.real,
-        displayEmail: alias.display,
-        createdAt: now
-      });
-      await saveData();
-      renderAliases();
+      try {
+        const alias = await getRandomAlias();
+        if (!alias || !alias.real || !alias.display) {
+          throw new Error('Failed to generate alias');
+        }
+
+        currentData.aliases.push({
+          realEmail: alias.real,
+          displayEmail: alias.display,
+          createdAt: now
+        });
+
+        await saveData();
+        renderAliases();
+      } catch (e) {
+        alert('Failed to create alias. Try again.');
+        console.error('Create alias error:', e);
+      }
     }
 
     async function attemptAutoLogin() {
@@ -675,6 +695,7 @@
         const now = Date.now();
         let changed = false;
         currentData.aliases = currentData.aliases.filter(alias => {
+          if (!alias || !alias.createdAt) return false;
           const expired = alias.createdAt + 72*60*60*1000 <= now;
           if (expired) changed = true;
           return !expired;
